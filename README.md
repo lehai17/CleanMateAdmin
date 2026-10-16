@@ -110,7 +110,7 @@ For full system tests, keep `admin/` and `backend/` as sibling folders, build
 then run `npm run build` and `npm run test:e2e` here.
 The suite uses a generated local SQL Server database and deletes it afterward.
 It never uses application data. Requires local database create/drop permissions.
-It covers 26 cases across desktop and mobile with the real API and database,
+It covers 30 cases across desktop and mobile with the real API and database,
 including staff resolution of support reports and reporter notifications,
 claim/release queues, Admin assignment, stale form conflicts and assignment inbox links.
 The Security page changes the current Admin/Staff password and invalidates all old
@@ -149,3 +149,11 @@ This repository tracks only `admin/`. Backend changes must be committed in
 `CleanmateBackend`; customer web changes in `CleanMateFrontend`.
 After creating an empty remote repository, connect it using
 `git remote add origin <your-admin-repository-url>`.
+
+## Email recovery and verification
+
+The login screen offers password recovery with a single-use email code. Security
+settings can request and confirm email verification. Reset revokes old sessions;
+verification does not grant a cleaner approval. Automated tests use a fake mailbox,
+not external email. A real SMTP relay must be configured and tested for deployment.
+See ../backend/ACCOUNT_RECOVERY.md for API, limits and restart/delivery caveats.
