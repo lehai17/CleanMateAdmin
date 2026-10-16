@@ -35,7 +35,7 @@ export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http:/
         response.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/json", ...(retryAfter ? {'Retry-After':retryAfter} : {}) });
         response.end(Buffer.from(await upstream.arrayBuffer())); return;
       }
-      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/account.js", "src/account.js"], ["/src/password.js", "src/password.js"], ["/src/conversation.js", "src/conversation.js"], ["/src/notifications.js", "src/notifications.js"], ["/src/styles.css", "src/styles.css"]]);
+      const files = new Map([["/src/ui/core.js", "src/ui/core.js"], ["/src/ui/catalog.js", "src/ui/catalog.js"], ["/src/ui/preferences.js", "src/ui/preferences.js"], ["/src/ui/preferences.css", "src/ui/preferences.css"], ["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/account.js", "src/account.js"], ["/src/password.js", "src/password.js"], ["/src/conversation.js", "src/conversation.js"], ["/src/notifications.js", "src/notifications.js"], ["/src/styles.css", "src/styles.css"]]);
       const file = files.get(url.pathname);
       if (!file || !["GET", "HEAD"].includes(request.method)) { response.writeHead(404).end(); return; }
       const content = await readFile(path.join(root, file));

@@ -1,3 +1,4 @@
+import { t } from './ui/preferences.js';
 import {showEmailVerification} from './account.js';
 export function showPassword({view,api,onChanged,fail}) {
   let busy=false;
@@ -5,7 +6,7 @@ export function showPassword({view,api,onChanged,fail}) {
   view.insertAdjacentHTML('beforeend','<section class="panel"><h3>Quản lý phiên đăng nhập</h3><p>Đăng xuất tất cả thiết bị, gồm cả thiết bị này. Mật khẩu không thay đổi. Bạn có thể dùng chức năng này khi đăng nhập bằng Google.</p><button id="logout-all" class="danger">Đăng xuất tất cả thiết bị</button><p id="logout-all-error" role="status"></p></section>');
   showEmailVerification({view,api,fail});
   document.querySelector('#logout-all').onclick=async()=>{
-    if(busy||!confirm('Đăng xuất tất cả thiết bị, gồm cả thiết bị này?'))return;
+    if(busy||!confirm(t('Đăng xuất tất cả thiết bị, gồm cả thiết bị này?')))return;
     busy=true;view.querySelectorAll('button').forEach(button=>button.disabled=true);
     try{await api('/auth/logout-all',{method:'POST'});onChanged('Đã đăng xuất tất cả thiết bị. Vui lòng đăng nhập lại.');}
     catch(e){if(e.status===401)fail(e);else view.querySelector('#logout-all-error').textContent=e.message || 'Không thể đăng xuất. Vui lòng thử lại.';}
