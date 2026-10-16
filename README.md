@@ -1,7 +1,7 @@
 # CleanMate Admin
 
-Independent admin/staff web application. This folder has its own Git repository
-(branch `main`); no commit, GitHub repository or remote has been created.
+Independent admin/staff web application. This folder has its own Git repository,
+published at https://github.com/lehai17/CleanMateAdmin (branch `main`).
 It uses the shared API in `../backend`, not a separate database.
 
 ## Features and permissions
@@ -14,6 +14,8 @@ It uses the shared API in `../backend`, not a separate database.
 | Change service price, duration limits and availability | Yes | No |
 | Create and lock/unlock Staff accounts | Yes | No |
 | Audit history | All actions | Own actions |
+| Claim/release own support reports and filter personal/unassigned queues | Yes | Yes |
+| Assign/reassign support to active Admin/Staff | Yes | No |
 
 Applicants remain customers until approved. Review results appear in their
 notification inbox; rejected/needs-info applicants can update and resubmit.
@@ -27,6 +29,11 @@ Staff can now search and resolve booking support reports, with required resoluti
 text, version checks, audit and reporter notifications. Reports never change cash
 records or bookings automatically. Document verification/upload and automatic job
 assignment are not included in this version. See ../backend/PROJECT_STATUS.md.
+
+Support assignment tracks who follows up while colleagues retain permission to
+help reply. Assigning another manager sends a notification opening the exact report.
+Stale changes require reloading. Disabled assignees stay visible until Admin
+reassigns them. See ../backend/SUPPORT_ASSIGNMENT.md for permissions and API details.
 
 ## Run locally
 
@@ -103,8 +110,9 @@ For full system tests, keep `admin/` and `backend/` as sibling folders, build
 then run `npm run build` and `npm run test:e2e` here.
 The suite uses a generated local SQL Server database and deletes it afterward.
 It never uses application data. Requires local database create/drop permissions.
-It covers 22 cases across desktop and mobile with the real API and database,
-including staff resolution of support reports and reporter notifications.
+It covers 26 cases across desktop and mobile with the real API and database,
+including staff resolution of support reports and reporter notifications,
+claim/release queues, Admin assignment, stale form conflicts and assignment inbox links.
 The Security page changes the current Admin/Staff password and invalidates all old
 JWT sessions, including the current one. Tests verify staff reauthentication and
 that a wrong current password does not sign the user out.
