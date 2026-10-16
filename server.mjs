@@ -14,7 +14,7 @@ export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http:/
     const url = new URL(request.url, "http://localhost");
     try {
       if (url.pathname.startsWith("/api/")) {
-        if (!(url.pathname === "/api/auth/login" || url.pathname === "/api/me" || url.pathname === "/api/management" || url.pathname.startsWith("/api/management/"))) {
+        if (!(url.pathname === "/api/auth/login" || url.pathname === "/api/auth/change-password" || url.pathname === "/api/auth/logout-all" || url.pathname === "/api/me" || url.pathname === "/api/management" || url.pathname.startsWith("/api/management/"))) {
           response.writeHead(404).end(); return;
         }
         if (!["GET", "POST", "PUT"].includes(request.method)) { response.writeHead(405).end(); return; }
@@ -32,7 +32,7 @@ export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http:/
         response.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/json" });
         response.end(Buffer.from(await upstream.arrayBuffer())); return;
       }
-      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/styles.css", "src/styles.css"]]);
+      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/password.js", "src/password.js"], ["/src/styles.css", "src/styles.css"]]);
       const file = files.get(url.pathname);
       if (!file || !["GET", "HEAD"].includes(request.method)) { response.writeHead(404).end(); return; }
       const content = await readFile(path.join(root, file));
