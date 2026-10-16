@@ -3,6 +3,23 @@ import { randomUUID } from "node:crypto";
 const API = "http://127.0.0.1:15238";
 const password = "CleanMate-admin-test-123!";
 const unique = () => `${randomUUID()}@example.test`;
+test('staff confirms logout all and keeps the existing password',async({page,request})=>{
+  const manager=await auth(request),email=unique();expect((await request.post(`${API}/api/management/staff`,{headers:{Authorization:`Bearer ${manager.token}`},data:{fullName:'Session Staff',email,password}})).status()).toBe(200);
+  const old=await auth(request,email);await login(page,email);await page.getByRole('link',{name:'Bảo mật',exact:true}).click();
+  page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'Đăng xuất tất cả thiết bị',exact:true}).click();expect((await request.get(`${API}/api/me`,{headers:{Authorization:`Bearer ${old.token}`}})).status()).toBe(200);
+  page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Đăng xuất tất cả thiết bị',exact:true}).click();await expect(page.getByText('Đã đăng xuất tất cả thiết bị. Vui lòng đăng nhập lại.',{exact:true})).toBeVisible();expect((await request.get(`${API}/api/me`,{headers:{Authorization:`Bearer ${old.token}`}})).status()).toBe(401);
+  await login(page,email);expect((await request.get(`${API}/api/me`,{headers:{Authorization:`Bearer ${manager.token}`}})).status()).toBe(200);
+});
+test('staff changes own password and old sessions stop working',async({page,request})=>{
+  const manager=await auth(request),email=unique(),next='New-staff-password-456!';
+  expect((await request.post(`${API}/api/management/staff`,{headers:{Authorization:`Bearer ${manager.token}`},data:{fullName:'Password Staff',email,password}})).status()).toBe(200);
+  const old=await auth(request,email);await login(page,email);await page.getByRole('link',{name:'Bảo mật',exact:true}).click();
+  await page.getByLabel('Mật khẩu hiện tại',{exact:true}).fill('wrong password');await page.getByLabel('Mật khẩu mới',{exact:true}).fill(next);await page.getByLabel('Nhập lại mật khẩu mới',{exact:true}).fill(next);await page.getByRole('button',{name:'Lưu mật khẩu mới',exact:true}).click();await expect(page.getByRole('alert')).toContainText('hiện tại không đúng');
+  await page.getByLabel('Mật khẩu hiện tại',{exact:true}).fill(password);await page.getByRole('button',{name:'Lưu mật khẩu mới',exact:true}).click();await expect(page.getByRole('button',{name:'Đăng nhập',exact:true})).toBeVisible();await expect(page.getByText('Đã đổi mật khẩu. Vui lòng đăng nhập lại.',{exact:true})).toBeVisible();
+  expect((await request.get(`${API}/api/me`,{headers:{Authorization:`Bearer ${old.token}`}})).status()).toBe(401);
+  expect((await request.post(`${API}/api/auth/login`,{data:{email,password}})).status()).toBe(401);
+  await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Mật khẩu',{exact:true}).fill(next);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await expect(page.getByRole('button',{name:'Đăng xuất',exact:true})).toBeVisible();
+});
 test('staff handles a customer support report with required resolution and records audit',async({page,request})=>{
   const email=unique();const r=await request.post(`${API}/api/auth/register`,{data:{fullName:'Support Customer',email,password,phoneNumber:'0901234567'}});expect(r.status()).toBe(200);const customer=await r.json();
   const booking=await request.post(`${API}/api/bookings`,{headers:{Authorization:`Bearer ${customer.token}`},data:{serviceKey:'cleaning',startTime:new Date(Date.now()+2*86400000).toISOString(),durationHours:2,address:'123 Support Street',paymentMethod:'cash'}});expect(booking.status()).toBe(200);const job=await booking.json();

@@ -1,5 +1,6 @@
 import { api, session } from "./api.js";
 import {renderSupport} from './support.js';
+import {showPassword} from './password.js';
 
 const root = document.querySelector("#app");
 const h = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -10,6 +11,7 @@ const names = { Pending: "Chờ duyệt", Approved: "Đã duyệt", NeedsInfo: "
 const badge = (value, context) => `<span class="status ${h(value)}">${h(value === "Pending" && context === "order" ? "Chờ nhận" : names[value] || value)}</span>`;
 const activeBadge = active => `<span class="status ${active ? "Approved" : "Cancelled"}">${active ? "Đang hoạt động" : "Tạm khóa"}</span>`;
 const nav = [["dashboard", "Tổng quan"], ["applications", "Hồ sơ cleaner"], ["orders", "Đơn hàng"], ["support","Hỗ trợ"], ["services", "Dịch vụ & giá"], ["staff", "Nhân sự"], ["audit", "Nhật ký thao tác"]];
+nav.push(['security','Bảo mật']);
 let user, generation = 0;
 const state = { applications: { page: 1, status: "Pending", search: "" }, orders: { page: 1, status: "All", search: "" },support:{page:1,status:'All',search:''} };
 let rows = [];
@@ -93,6 +95,7 @@ async function render() {
   const ticket = ++generation; layout(current);
   const view = document.querySelector("#view");
   try {
+    if(current==='security')return showPassword({view,api,fail,onChanged:(notice='Đã đổi mật khẩu. Vui lòng đăng nhập lại.')=>{session.clear();user=null;login(notice);}});
     if (current === "staff" && user.role !== "Admin") throw new Error("Chỉ Admin được quản lý nhân sự.");
     const query = state[current] ? `?${new URLSearchParams(state[current])}` : "";
     const data = await api(`/management/${current}${query}`);

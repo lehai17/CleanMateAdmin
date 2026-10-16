@@ -103,8 +103,13 @@ For full system tests, keep `admin/` and `backend/` as sibling folders, build
 then run `npm run build` and `npm run test:e2e` here.
 The suite uses a generated local SQL Server database and deletes it afterward.
 It never uses application data. Requires local database create/drop permissions.
-It covers 10 cases across desktop and mobile with the real API and database,
+It covers 14 cases across desktop and mobile with the real API and database,
 including staff resolution of support reports and reporter notifications.
+The Security page changes the current Admin/Staff password and invalidates all old
+JWT sessions, including the current one. Tests verify staff reauthentication and
+that a wrong current password does not sign the user out.
+Security also offers confirmed logout from all CleanMate sessions without changing
+the password. The suite verifies cancellation, revocation and signing in again.
 Do not run alongside the customer web system tests: they share test host ports.
 The synthetic admin credentials inside test fixtures belong only to these
 temporary databases and are never provisioned in an application database.
