@@ -3,6 +3,34 @@ import { randomUUID } from "node:crypto";
 const API = "http://127.0.0.1:15238";
 const password = "CleanMate-admin-test-123!";
 const unique = () => `${randomUUID()}@example.test`;
+async function assignmentReport(request){
+  const email=unique(),signup=await request.post(`${API}/api/auth/register`,{data:{fullName:'Assignment Customer',email,password}});expect(signup.status()).toBe(200);
+  const customer=await signup.json(),headers={Authorization:`Bearer ${customer.token}`};
+  const booking=await request.post(`${API}/api/bookings`,{headers,data:{serviceKey:'cleaning',startTime:new Date(Date.now()+2*86400000).toISOString(),durationHours:2,address:'123 Assignment Street',paymentMethod:'cash'}});expect(booking.status()).toBe(200);
+  const report=await request.post(`${API}/api/support`,{headers,data:{bookingId:(await booking.json()).id,category:'Other',description:'Cần phân công người theo dõi yêu cầu.',requestId:randomUUID()}});expect(report.status()).toBe(200);
+  return {id:(await report.json()).id,email};
+}
+
+test('staff claims an unassigned report, filters their queue and releases it',async({page,request})=>{
+  const staff=await notificationStaff(request),report=await assignmentReport(request);await login(page,staff.email);await page.getByRole('link',{name:'Hỗ trợ',exact:true}).click();
+  await page.getByLabel('Tìm yêu cầu',{exact:true}).fill(report.email);await page.getByLabel('Phân công',{exact:true}).selectOption('Unassigned');await page.getByRole('button',{name:'Lọc hỗ trợ',exact:true}).click();
+  const card=page.locator(`[data-support-id="${report.id}"]`);await card.getByRole('button',{name:'Nhận xử lý',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Lưu phân công',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card).toHaveCount(0);
+  await page.getByLabel('Phân công',{exact:true}).selectOption('Mine');await page.getByRole('button',{name:'Lọc hỗ trợ',exact:true}).click();await expect(card).toContainText('Phụ trách: Inbox Staff');
+  await card.getByRole('button',{name:'Bỏ nhận yêu cầu',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Lưu phân công',exact:true}).click();await expect(card).toHaveCount(0);
+  await page.getByLabel('Phân công',{exact:true}).selectOption('Unassigned');await page.getByRole('button',{name:'Lọc hỗ trợ',exact:true}).click();await expect(card).toContainText('Chưa phân công');
+});
+
+test('admin assignment notifies the assignee and a stale form cannot overwrite it',async({page,request})=>{
+  const staff=await notificationStaff(request),manager=await auth(request),report=await assignmentReport(request);await login(page);await page.getByRole('link',{name:'Hỗ trợ',exact:true}).click();
+  await page.getByLabel('Tìm yêu cầu',{exact:true}).fill(report.email);await page.getByRole('button',{name:'Lọc hỗ trợ',exact:true}).click();const card=page.locator(`[data-support-id="${report.id}"]`);
+  await card.getByRole('button',{name:'Phân công',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByLabel('Người phụ trách',{exact:true}).selectOption(String(staff.user.id));
+  const assigned=await request.put(`${API}/api/management/support/${report.id}/assignment`,{headers:{Authorization:`Bearer ${manager.token}`},data:{assignedToId:staff.user.id,version:1}});expect(assigned.status()).toBe(200);
+  await dialog.getByRole('button',{name:'Lưu phân công',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('Vui lòng tải lại');await dialog.getByRole('button',{name:'Đóng',exact:true}).click();
+  await page.getByRole('button',{name:'Lọc hỗ trợ',exact:true}).click();await expect(card).toContainText('Phụ trách: Inbox Staff');
+  await card.getByRole('button',{name:'Phân công',exact:true}).click();await dialog.getByLabel('Người phụ trách',{exact:true}).selectOption('');await dialog.getByRole('button',{name:'Lưu phân công',exact:true}).click();await expect(dialog).toHaveCount(0);await expect(card).toContainText('Chưa phân công');
+  await card.getByRole('button',{name:'Phân công',exact:true}).click();await dialog.getByLabel('Người phụ trách',{exact:true}).selectOption(String(staff.user.id));await dialog.getByRole('button',{name:'Lưu phân công',exact:true}).click();await expect(dialog).toHaveCount(0);await expect(card).toContainText('Phụ trách: Inbox Staff');
+  await page.getByRole('button',{name:'Đăng xuất',exact:true}).click();await login(page,staff.email);await page.getByRole('link',{name:'Thông báo',exact:true}).click();const notice=page.locator('[data-notification-id]').filter({hasText:'Bạn được giao yêu cầu hỗ trợ'});await expect(notice).toHaveCount(2);await notice.first().getByRole('button',{name:'Xem hỗ trợ',exact:true}).click();await expect(card).toContainText('Phụ trách: Inbox Staff');await expect(card.getByRole('button',{name:'Bỏ nhận yêu cầu',exact:true})).toBeVisible();
+});
 async function notificationStaff(request){const manager=await auth(request),email=unique();expect((await request.post(`${API}/api/management/staff`,{headers:{Authorization:`Bearer ${manager.token}`},data:{fullName:'Inbox Staff',email,password}})).status()).toBe(200);return {...await auth(request,email),email};}
 test('staff inbox opens the exact processed cleaner profile and keeps read state after reload',async({page,request})=>{
   const staff=await notificationStaff(request),manager=await auth(request),email=unique();const created=await request.post(`${API}/api/auth/register`,{data:{fullName:'Inbox Applicant',email,password,role:'Cleaner'}});expect(created.status()).toBe(200);const profile=(await created.json()).user.cleanerProfile.id;
