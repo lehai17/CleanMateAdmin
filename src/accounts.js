@@ -1,0 +1,25 @@
+export function showAccounts({view,data,filters,api,h,onFilter,onUpdated,onConflict=onUpdated,fail,isCurrent=()=>true}) {
+  const raw=value=>`<span data-ui-raw>${h(value)}</span>`;
+  view.innerHTML=`<h2>Quản lý tài khoản khách và cleaner</h2><p class="muted">Chỉ Admin được khóa/mở tài khoản. Mỗi thay đổi thu hồi phiên cũ; mở khóa yêu cầu đăng nhập lại. Khóa không hủy đơn hoặc thay đổi tiền mặt.</p>
+    <form class="filters" data-account-filters><label>Tìm tài khoản<input name="search" maxlength="100" placeholder="Tên, email, số điện thoại hoặc ID" value="${h(filters.search)}"></label><label>Vai trò<select name="role" aria-label="Vai trò">${[['All','Tất cả'],['Customer','Khách hàng'],['Cleaner','Cleaner']].map(([key,label])=>`<option value="${key}" ${filters.role===key?'selected':''}>${label}</option>`).join('')}</select></label><label>Trạng thái<select name="status" aria-label="Trạng thái">${[['All','Tất cả'],['Active','Đang hoạt động'],['Locked','Tạm khóa']].map(([key,label])=>`<option value="${key}" ${filters.status===key?'selected':''}>${label}</option>`).join('')}</select></label><button>Lọc tài khoản</button></form>
+    <div class="panel table-wrap"><table><thead><tr>${['Tài khoản','Vai trò','Trạng thái','Ca đã nhận / đang làm','Đơn chờ nhận','Thao tác'].map(label=>`<th>${label}</th>`).join('')}</tr></thead><tbody>${data.items.map(item=>`<tr data-account-id="${item.id}"><td><strong>${raw(item.fullName)}</strong> · #${item.id}<small>${raw(item.email)}</small><small>${raw(item.phoneNumber || '—')}</small></td><td>${item.role==='Customer'?'Khách hàng':'Cleaner'}</td><td>${item.isActive?'Đang hoạt động':'Tạm khóa'}</td><td>${item.activeBookings}</td><td>${item.pendingBookings}</td><td><button class="${item.isActive?'danger':'secondary'}" data-account-access="${item.id}">${item.isActive?'Khóa truy cập':'Mở truy cập'}</button></td></tr>`).join('') || '<tr><td colspan="6">Không có dữ liệu phù hợp.</td></tr>'}</tbody></table></div>
+    <div class="pagination"><p>${data.total} kết quả · Trang ${data.page}</p><div><button data-account-prev ${data.page<=1?'disabled':''}>Trang trước</button> <button data-account-next ${data.page*data.pageSize>=data.total?'disabled':''}>Trang sau</button></div></div>`;
+  view.querySelector('[data-account-filters]').onsubmit=event=>{event.preventDefault();onFilter({...Object.fromEntries(new FormData(event.currentTarget)),page:1});};
+  view.querySelector('[data-account-prev]').onclick=()=>onFilter({...filters,page:data.page-1});
+  view.querySelector('[data-account-next]').onclick=()=>onFilter({...filters,page:data.page+1});
+  view.querySelectorAll('[data-account-access]').forEach(button=>button.onclick=()=>{
+    const item=data.items.find(row=>row.id===Number(button.dataset.accountAccess));
+    const dialog=document.createElement('dialog');dialog.setAttribute('aria-label','Thay đổi truy cập tài khoản');
+    dialog.innerHTML=`<h3>${item.isActive?'Khóa truy cập':'Mở truy cập'}</h3><p>${raw(item.fullName)} · ${raw(item.email)}</p><p>Khóa/mở sẽ thu hồi các phiên đăng nhập cũ. Khóa không tự hủy các đơn đã đặt hoặc đã nhận.</p>${item.activeBookings>0||item.pendingBookings>0?'<p class="alert">Tài khoản còn đơn chưa kết thúc. Kiểm tra lịch và liên hệ hai bên để xử lý các ca trước khi khóa.</p>':''}<form class="form-grid"><label>Lý do thay đổi truy cập<textarea name="reason" aria-label="Lý do thay đổi truy cập" minlength="10" maxlength="1000" rows="4" required></textarea></label><label class="check"><input name="confirm" type="checkbox" required>Tôi xác nhận thay đổi quyền truy cập</label><p data-account-error role="alert"></p><button>Xác nhận</button><button type="button" class="secondary" data-close>Đóng</button></form>`;
+    document.body.appendChild(dialog);dialog.onclose=()=>dialog.remove();dialog.querySelector('[data-close]').onclick=()=>dialog.close();dialog.showModal();
+    let busy=false;dialog.querySelector('form').onsubmit=async event=>{
+      event.preventDefault();if(!isCurrent()){dialog.close();return;}if(busy)return;
+      const reason=event.currentTarget.elements.reason.value.trim(),error=dialog.querySelector('[data-account-error]');
+      if(reason.length<10){error.textContent='Lý do thay đổi truy cập cần từ 10 đến 1000 ký tự.';return;}
+      busy=true;dialog.querySelectorAll('button,textarea,input').forEach(el=>el.disabled=true);const prevent=event=>event.preventDefault();dialog.addEventListener('cancel',prevent);
+      try{await api(`/management/accounts/${item.id}/access`,{method:'PUT',data:{isActive:!item.isActive,expectedActive:item.isActive,reason}});dialog.close();if(isCurrent())await onUpdated();}
+      catch(e){if(!isCurrent())dialog.close();else if(e.status===401){dialog.close();fail(e);}else if(e.status===409){dialog.close();await onConflict();}else error.textContent=e.message||'Không thể lưu. Vui lòng thử lại.';}
+      finally{busy=false;dialog.removeEventListener('cancel',prevent);dialog.querySelectorAll('button,textarea,input').forEach(el=>el.disabled=false);}
+    };
+  });
+}

@@ -18,6 +18,7 @@ test('translation is whole-phrase only and never rewrites unknown content or bus
   assert.equal(translate('Đăng nhập','vi'),'Đăng nhập');
   for(const value of ['CM123','HouseCleaning','constructor','toString','__proto__','Khách tên Đăng nhập','customer@example.test',123,null])assert.equal(translate(value,'en'),value);
   assert.equal(translate('3 thông báo chưa đọc','en'),'3 unread notifications');
+  assert.equal(translate('23 kết quả · Trang 2','en'),'23 results · Page 2');
 });
 test('both palettes keep primary and secondary text readable on their surfaces',()=>{
   const luminance=hex=>{const values=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);return values[0]*0.2126+values[1]*0.7152+values[2]*0.0722;};
