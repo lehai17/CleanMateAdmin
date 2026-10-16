@@ -14,7 +14,7 @@ export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http:/
     const url = new URL(request.url, "http://localhost");
     try {
       if (url.pathname.startsWith("/api/")) {
-        if (!(url.pathname === "/api/auth/login" || url.pathname === "/api/auth/change-password" || url.pathname === "/api/auth/logout-all" || url.pathname === "/api/me" || /^\/api\/notifications(?:\/(?:unread-count|read-all|\d+\/read))?$/.test(url.pathname) || url.pathname === "/api/management" || url.pathname.startsWith("/api/management/"))) {
+        if (!(url.pathname === "/api/auth/login" || ["/api/auth/forgot-password","/api/auth/reset-password","/api/auth/request-email-verification","/api/auth/verify-email"].includes(url.pathname) || url.pathname === "/api/auth/change-password" || url.pathname === "/api/auth/logout-all" || url.pathname === "/api/me" || /^\/api\/notifications(?:\/(?:unread-count|read-all|\d+\/read))?$/.test(url.pathname) || url.pathname === "/api/management" || url.pathname.startsWith("/api/management/"))) {
           response.writeHead(404).end(); return;
         }
         if (!["GET", "POST", "PUT"].includes(request.method)) { response.writeHead(405).end(); return; }
@@ -35,7 +35,7 @@ export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http:/
         response.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/json", ...(retryAfter ? {'Retry-After':retryAfter} : {}) });
         response.end(Buffer.from(await upstream.arrayBuffer())); return;
       }
-      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/password.js", "src/password.js"], ["/src/conversation.js", "src/conversation.js"], ["/src/notifications.js", "src/notifications.js"], ["/src/styles.css", "src/styles.css"]]);
+      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/account.js", "src/account.js"], ["/src/password.js", "src/password.js"], ["/src/conversation.js", "src/conversation.js"], ["/src/notifications.js", "src/notifications.js"], ["/src/styles.css", "src/styles.css"]]);
       const file = files.get(url.pathname);
       if (!file || !["GET", "HEAD"].includes(request.method)) { response.writeHead(404).end(); return; }
       const content = await readFile(path.join(root, file));

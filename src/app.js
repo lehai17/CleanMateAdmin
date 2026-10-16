@@ -1,3 +1,4 @@
+import {showRecovery} from './account.js';
 import { api, session } from "./api.js";
 import {renderSupport} from './support.js';
 import {showPassword} from './password.js';
@@ -36,6 +37,7 @@ function login(error = "") {
   generation++;
   unreadPoller.accept(0);
   root.innerHTML = `<div class="login"><aside class="login-aside"><div class="brand">Clean<span>Mate</span></div><h1>Quản lý dịch vụ.<br>Vận hành rõ ràng.</h1><p>Không gian làm việc dành cho đội ngũ CleanMate. Duyệt hồ sơ, theo dõi ca làm và quản lý dịch vụ tại một nơi.</p></aside><main class="login-main"><p class="eyebrow">Cổng quản trị</p><h2>Đăng nhập</h2><p class="muted">Sử dụng tài khoản Admin hoặc Staff được cấp.</p><div id="notice" class="${error ? "alert" : ""}">${h(error)}</div><form id="login"><label>Email<input name="email" type="email" autocomplete="username" required maxlength="254"></label><label>Mật khẩu<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label><button>Đăng nhập</button></form><p class="muted">Tài khoản quản trị không được tạo qua đăng ký công khai.</p></main></div>`;
+  const recovery=document.createElement('button');recovery.type='button';recovery.className='secondary';recovery.textContent='Quên mật khẩu?';root.querySelector('.login-main').appendChild(recovery);recovery.onclick=()=>showRecovery({view:root,api,onBack:()=>login()});
   document.querySelector("#login").onsubmit = async event => {
     event.preventDefault(); const form = event.currentTarget; const button = form.querySelector("button"); button.disabled = true;
     try {
