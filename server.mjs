@@ -24,12 +24,15 @@ export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http:/
           if (body.length > 524288) { response.writeHead(413).end(); return; }
         }
         const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        // Overwrite any browser-supplied forwarding header with the actual peer.
+        if (request.socket.remoteAddress) headers['X-Forwarded-For'] = request.socket.remoteAddress;
         if (request.headers.authorization) headers.Authorization = request.headers.authorization;
         const upstream = await fetch(new URL(url.pathname + url.search, api), {
           method: request.method, headers, body: body.length ? body : undefined,
           signal: AbortSignal.timeout(30000), redirect: "manual"
         });
-        response.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/json" });
+        const retryAfter = upstream.headers.get('retry-after');
+        response.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/json", ...(retryAfter ? {'Retry-After':retryAfter} : {}) });
         response.end(Buffer.from(await upstream.arrayBuffer())); return;
       }
       const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/password.js", "src/password.js"], ["/src/styles.css", "src/styles.css"]]);

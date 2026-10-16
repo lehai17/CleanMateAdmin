@@ -69,7 +69,7 @@ From `backend/`, in PowerShell:
 ```powershell
 $env:CLEANMATE_ADMIN_EMAIL = Read-Host 'Admin email'
 $env:CLEANMATE_ADMIN_NAME = Read-Host 'Admin name'
-$adminSecret = Read-Host 'Password (12-128 characters)' -AsSecureString
+$adminSecret = Read-Host 'Password (12+ characters, max 72 UTF-8 bytes)' -AsSecureString
 $adminCredential = [System.Net.NetworkCredential]::new('', $adminSecret)
 try {
     $env:CLEANMATE_ADMIN_PASSWORD = $adminCredential.Password
@@ -103,7 +103,7 @@ For full system tests, keep `admin/` and `backend/` as sibling folders, build
 then run `npm run build` and `npm run test:e2e` here.
 The suite uses a generated local SQL Server database and deletes it afterward.
 It never uses application data. Requires local database create/drop permissions.
-It covers 14 cases across desktop and mobile with the real API and database,
+It covers 16 cases across desktop and mobile with the real API and database,
 including staff resolution of support reports and reporter notifications.
 The Security page changes the current Admin/Staff password and invalidates all old
 JWT sessions, including the current one. Tests verify staff reauthentication and
@@ -119,6 +119,11 @@ For deployment, run the Node server behind an HTTPS reverse proxy and configure
 as a generic file server. No hosting or deployment is configured here.
 
 ## Git
+
+Authentication limits apply to Admin and Staff. The portal preserves backend
+retry instructions and replaces browser-provided IP forwarding headers with the
+socket peer IP. Staff creation accepts 12+ characters and at most 72 UTF-8 bytes.
+Deployment limits/proxy trust and test scope: ../backend/AUTH_RATE_LIMITS.md.
 
 This repository tracks only `admin/`. Backend changes must be committed in
 `CleanmateBackend`; customer web changes in `CleanMateFrontend`.

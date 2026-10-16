@@ -86,7 +86,7 @@ function editService(item) {
   };
 }
 function createStaff() {
-  const dialog = modal("Tạo tài khoản Staff", `<p class="muted">Staff được duyệt hồ sơ và tra cứu đơn. Thay đổi giá và quản lý nhân sự dành cho Admin.</p><form class="form-grid"><label>Họ tên<input name="fullName" required maxlength="200" autocomplete="name"></label><label>Email<input name="email" type="email" required autocomplete="off"></label><label>Mật khẩu ban đầu<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label><p data-error role="alert" class="alert"></p><button>Tạo Staff</button></form>`);
+  const dialog = modal("Tạo tài khoản Staff", `<p class="muted">Staff được duyệt hồ sơ và tra cứu đơn. Thay đổi giá và quản lý nhân sự dành cho Admin.</p><form class="form-grid"><label>Họ tên<input name="fullName" required maxlength="200" autocomplete="name"></label><label>Email<input name="email" type="email" required autocomplete="off"></label><label>Mật khẩu ban đầu<input name="password" type="password" required minlength="12" maxlength="72" autocomplete="new-password"></label><p data-error role="alert" class="alert"></p><button>Tạo Staff</button></form>`);
   dialog.querySelector("form").onsubmit = event => { event.preventDefault(); const form = event.currentTarget; submitDialog(dialog, () => api("/management/staff", { method: "POST", data: { fullName: form.elements.fullName.value, email: form.elements.email.value, password: form.elements.password.value } })); };
 }
 async function render() {

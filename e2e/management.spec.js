@@ -3,6 +3,11 @@ import { randomUUID } from "node:crypto";
 const API = "http://127.0.0.1:15238";
 const password = "CleanMate-admin-test-123!";
 const unique = () => `${randomUUID()}@example.test`;
+test('management login displays retry instructions without creating a session',async({page})=>{
+  await page.goto('/');await page.route('**/api/auth/login',route=>route.fulfill({status:429,contentType:'application/json',headers:{'Retry-After':'42'},body:JSON.stringify({message:'Thử lại sau 42 giây.',retryAfterSeconds:42})}));
+  await page.getByLabel('Email',{exact:true}).fill('admin@system.test');await page.getByLabel('Mật khẩu',{exact:true}).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await expect(page.locator('#notice')).toContainText('42 giây');await expect(page.getByLabel('Mật khẩu',{exact:true})).toHaveValue('');
+  await page.unroute('**/api/auth/login');await login(page);
+});
 test('staff confirms logout all and keeps the existing password',async({page,request})=>{
   const manager=await auth(request),email=unique();expect((await request.post(`${API}/api/management/staff`,{headers:{Authorization:`Bearer ${manager.token}`},data:{fullName:'Session Staff',email,password}})).status()).toBe(200);
   const old=await auth(request,email);await login(page,email);await page.getByRole('link',{name:'Bảo mật',exact:true}).click();
