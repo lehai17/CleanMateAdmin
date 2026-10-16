@@ -25,3 +25,13 @@ test("static server refuses repository files and proxies authenticated managemen
     assert.equal((await denied.json()).message, "Denied by backend");
   } finally { app.closeAllConnections(); upstream.closeAllConnections(); await Promise.all([new Promise(done => app.close(done)), new Promise(done => upstream.close(done))]); }
 });
+
+test('auth proxy replaces spoofed IP headers and preserves retry instructions',async()=>{
+  const upstream=http.createServer((request,response)=>{
+    assert.equal(request.headers['x-forwarded-for'],'127.0.0.1');
+    response.writeHead(429,{'Content-Type':'application/json','Retry-After':'42'}).end(JSON.stringify({message:'Retry in 42 seconds',retryAfterSeconds:42}));
+  });upstream.listen(0,'127.0.0.1');await once(upstream,'listening');
+  const app=createServer({apiUrl:`http://127.0.0.1:${upstream.address().port}`});app.listen(0,'127.0.0.1');await once(app,'listening');
+  try{const response=await fetch(`http://127.0.0.1:${app.address().port}/api/auth/login`,{method:'POST',headers:{'X-Forwarded-For':'198.51.100.99','Content-Type':'application/json'},body:'{}'});assert.equal(response.status,429);assert.equal(response.headers.get('retry-after'),'42');assert.equal((await response.json()).retryAfterSeconds,42);}
+  finally{app.closeAllConnections();upstream.closeAllConnections();await Promise.all([new Promise(done=>app.close(done)),new Promise(done=>upstream.close(done))]);}
+});
