@@ -35,7 +35,7 @@ export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http:/
         response.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/json", ...(retryAfter ? {'Retry-After':retryAfter} : {}) });
         response.end(Buffer.from(await upstream.arrayBuffer())); return;
       }
-      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/password.js", "src/password.js"], ["/src/styles.css", "src/styles.css"]]);
+      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/support.js", "src/support.js"], ["/src/password.js", "src/password.js"], ["/src/conversation.js", "src/conversation.js"], ["/src/styles.css", "src/styles.css"]]);
       const file = files.get(url.pathname);
       if (!file || !["GET", "HEAD"].includes(request.method)) { response.writeHead(404).end(); return; }
       const content = await readFile(path.join(root, file));

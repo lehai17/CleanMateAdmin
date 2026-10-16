@@ -103,7 +103,7 @@ For full system tests, keep `admin/` and `backend/` as sibling folders, build
 then run `npm run build` and `npm run test:e2e` here.
 The suite uses a generated local SQL Server database and deletes it afterward.
 It never uses application data. Requires local database create/drop permissions.
-It covers 16 cases across desktop and mobile with the real API and database,
+It covers 18 cases across desktop and mobile with the real API and database,
 including staff resolution of support reports and reporter notifications.
 The Security page changes the current Admin/Staff password and invalidates all old
 JWT sessions, including the current one. Tests verify staff reauthentication and
@@ -119,6 +119,11 @@ For deployment, run the Node server behind an HTTPS reverse proxy and configure
 as a generic file server. No hosting or deployment is configured here.
 
 ## Git
+
+Support → Xem trao đổi reads private reporter/staff history and sends staff replies.
+New processing responses join the history. Reply acknowledgements update the local
+version so a subsequent resolution uses the current ticket version. Resolved
+tickets must be reopened before a new staff reply. See ../backend/SUPPORT_CONVERSATIONS.md.
 
 Authentication limits apply to Admin and Staff. The portal preserves backend
 retry instructions and replaces browser-provided IP forwarding headers with the
