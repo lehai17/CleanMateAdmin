@@ -1,3 +1,4 @@
+import {conversation} from './conversation.js';
 const statuses={All:'Tất cả',Open:'Đã tiếp nhận',InProgress:'Đang xử lý',Resolved:'Đã giải quyết'};
 const categories={Scheduling:'Lịch làm / không đến',Quality:'Chất lượng',CashPayment:'Tiền mặt trực tiếp',Other:'Vấn đề khác'};
 export function renderSupport({view,data,filters,api,h,onFilter,onUpdated,fail}) {
@@ -7,6 +8,10 @@ export function renderSupport({view,data,filters,api,h,onFilter,onUpdated,fail})
   document.querySelector('#support-filter').onsubmit=event=>{event.preventDefault();onFilter({...Object.fromEntries(new FormData(event.currentTarget)),page:1});};
   document.querySelector('#support-prev').onclick=()=>onFilter({...filters,page:data.page-1});
   document.querySelector('#support-next').onclick=()=>onFilter({...filters,page:data.page+1});
+  view.querySelectorAll('[data-support-id]').forEach(card=>{
+    const item=data.items.find(row=>row.id===Number(card.dataset.supportId)),container=document.createElement('div');card.appendChild(container);
+    conversation({container,ticketId:item.id,api,h,management:true,fail,onUpdated:result=>{item.version=result.version??item.version;item.status=result.status??item.status;}});
+  });
   view.querySelectorAll('[data-respond]').forEach(button=>button.onclick=()=>{
     const item=data.items.find(row=>row.id===Number(button.dataset.respond));
     const dialog=document.createElement('dialog');dialog.setAttribute('aria-label',`Xử lý HT${item.id}`);

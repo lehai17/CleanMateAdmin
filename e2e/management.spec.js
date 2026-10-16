@@ -3,6 +3,15 @@ import { randomUUID } from "node:crypto";
 const API = "http://127.0.0.1:15238";
 const password = "CleanMate-admin-test-123!";
 const unique = () => `${randomUUID()}@example.test`;
+test('staff reads and replies to a support conversation then resolves with the current version',async({page,request})=>{
+  const email=unique(),registered=await request.post(`${API}/api/auth/register`,{data:{fullName:'Conversation Customer',email,password}});const customer=await registered.json(),headers={Authorization:`Bearer ${customer.token}`};
+  const booking=await request.post(`${API}/api/bookings`,{headers,data:{serviceKey:'cleaning',startTime:new Date(Date.now()+2*86400000).toISOString(),durationHours:2,address:'123 Conversation Street',paymentMethod:'cash'}});const job=await booking.json();
+  const created=await request.post(`${API}/api/support`,{headers,data:{bookingId:job.id,category:'Other',description:'Cần trao đổi thêm về ca làm.',requestId:randomUUID()}});expect(created.status()).toBe(200);const ticket=(await created.json()).id;
+  expect((await request.post(`${API}/api/support/${ticket}/messages`,{headers,data:{body:'Khách bổ sung thông tin.',requestId:randomUUID()}})).status()).toBe(200);
+  await login(page);await page.getByRole('link',{name:'Hỗ trợ',exact:true}).click();await page.getByLabel('Tìm yêu cầu',{exact:true}).fill(email);await page.getByRole('button',{name:'Lọc hỗ trợ',exact:true}).click();const card=page.locator(`[data-support-id="${ticket}"]`);
+  await card.getByRole('button',{name:'Xem trao đổi',exact:true}).click();await expect(card.locator('[data-message-id]')).toContainText('Khách bổ sung');await card.getByLabel('Tin nhắn hỗ trợ',{exact:true}).fill('Staff đã đọc và đang kiểm tra thông tin.');await card.getByRole('button',{name:'Gửi tin nhắn',exact:true}).click();await expect(card.locator('[data-message-id]')).toHaveCount(2);
+  await card.getByRole('button',{name:'Xử lý yêu cầu',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByLabel('Trạng thái mới',{exact:true}).selectOption('Resolved');await dialog.getByLabel('Phản hồi',{exact:true}).fill('Đã trao đổi và xác nhận đầy đủ với khách.');await dialog.getByRole('button',{name:'Lưu xử lý',exact:true}).click();await expect(dialog).toHaveCount(0);await expect(card).toContainText('Đã giải quyết');await card.getByRole('button',{name:'Xem trao đổi',exact:true}).click();await expect(card.locator('[data-message-id]')).toHaveCount(3);
+});
 test('management login displays retry instructions without creating a session',async({page})=>{
   await page.goto('/');await page.route('**/api/auth/login',route=>route.fulfill({status:429,contentType:'application/json',headers:{'Retry-After':'42'},body:JSON.stringify({message:'Thử lại sau 42 giây.',retryAfterSeconds:42})}));
   await page.getByLabel('Email',{exact:true}).fill('admin@system.test');await page.getByLabel('Mật khẩu',{exact:true}).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await expect(page.locator('#notice')).toContainText('42 giây');await expect(page.getByLabel('Mật khẩu',{exact:true})).toHaveValue('');
