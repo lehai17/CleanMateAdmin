@@ -1,4 +1,5 @@
 import { api, session } from "./api.js";
+import {renderSupport} from './support.js';
 
 const root = document.querySelector("#app");
 const h = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -8,9 +9,9 @@ const date = value => value ? new Date(value).toLocaleString("vi-VN") : "—";
 const names = { Pending: "Chờ duyệt", Approved: "Đã duyệt", NeedsInfo: "Cần bổ sung", Rejected: "Từ chối", Accepted: "Đã nhận", InProgress: "Đang làm", Completed: "Hoàn thành", Cancelled: "Đã hủy" };
 const badge = (value, context) => `<span class="status ${h(value)}">${h(value === "Pending" && context === "order" ? "Chờ nhận" : names[value] || value)}</span>`;
 const activeBadge = active => `<span class="status ${active ? "Approved" : "Cancelled"}">${active ? "Đang hoạt động" : "Tạm khóa"}</span>`;
-const nav = [["dashboard", "Tổng quan"], ["applications", "Hồ sơ cleaner"], ["orders", "Đơn hàng"], ["services", "Dịch vụ & giá"], ["staff", "Nhân sự"], ["audit", "Nhật ký thao tác"]];
+const nav = [["dashboard", "Tổng quan"], ["applications", "Hồ sơ cleaner"], ["orders", "Đơn hàng"], ["support","Hỗ trợ"], ["services", "Dịch vụ & giá"], ["staff", "Nhân sự"], ["audit", "Nhật ký thao tác"]];
 let user, generation = 0;
-const state = { applications: { page: 1, status: "Pending", search: "" }, orders: { page: 1, status: "All", search: "" } };
+const state = { applications: { page: 1, status: "Pending", search: "" }, orders: { page: 1, status: "All", search: "" },support:{page:1,status:'All',search:''} };
 let rows = [];
 const route = () => location.hash.slice(2) || "dashboard";
 
@@ -99,6 +100,8 @@ async function render() {
     if (current === "dashboard") {
       const cards = [["Đơn hôm nay", number(data.todayOrders)], ["Đơn chờ nhận", number(data.pendingOrders)], ["Hồ sơ chờ duyệt", number(data.pendingApplications)], ["Cleaner đã duyệt", number(data.approvedCleaners)]];
       view.innerHTML = `<div class="intro"><p class="eyebrow">Tổng quan vận hành</p><h2>Mọi hoạt động trong tầm nhìn.</h2><p class="muted">Số liệu thực từ hệ thống CleanMate · Hôm nay theo UTC+7.</p></div><div class="cards">${cards.map(([label, value], index) => `<section class="card ${index === 2 ? "featured" : ""}"><small>${label}</small><strong>${value}</strong></section>`).join("")}</div><div class="grid-two"><section class="panel"><h3>Trạng thái đơn hàng</h3>${data.byStatus.map(item => `<div class="stat-line"><span>${item.status === "Pending" ? "Chờ nhận" : h(names[item.status] || item.status)}</span><strong>${number(item.count)}</strong></div>`).join("") || '<p class="muted">Chưa có đơn hàng.</p>'}<p class="muted">Tổng cộng ${number(data.totalOrders)} đơn · ${number(data.customers)} tài khoản khách hàng.</p></section><section class="panel"><h3>Giá trị dịch vụ hoàn thành</h3><h2>${money(data.completedServiceValue)}</h2><p class="muted value-note">Khách trả tiền mặt trực tiếp cho cleaner. Đây là tổng giá trị các ca đã hoàn thành; CleanMate không thu hoặc giữ khoản tiền này.</p><p class="muted">${number(data.completedOrders)} ca hoàn thành</p><a href="#/orders">Xem danh sách đơn →</a></section></div>`;
+    } else if (current === "support") {
+      renderSupport({view,data,filters:state.support,api,h,fail,onFilter:values=>{state.support=values;render();},onUpdated:async()=>{await render();showNotice('Đã cập nhật yêu cầu và thông báo cho người gửi.',true);}});
     } else if (current === "applications") {
       rows = data.items;
       view.innerHTML = `<p class="eyebrow">Đội ngũ cleaner</p><h2>Duyệt hồ sơ đăng ký</h2><p class="muted">Chỉ hồ sơ được duyệt mới có quyền nhận việc. Mọi kết quả duyệt được lưu và gửi thông báo cho người đăng ký.</p>${filters(current)}<section class="panel">${table(["Ứng viên", "Khu vực", "Ngày gửi", "Trạng thái", "Thao tác"], rows.map(item => `<tr><td><strong>${h(item.name)}</strong><small>${h(item.email)}</small></td><td>${h(item.city)}</td><td>${h(date(item.submittedAt))}</td><td>${badge(item.reviewStatus)}</td><td><button data-review="${item.id}" class="secondary">${item.reviewStatus === "Pending" ? "Xem & duyệt" : "Xem hồ sơ"}</button></td></tr>`).join(""))}${pagination(data)}</section>`;

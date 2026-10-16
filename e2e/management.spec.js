@@ -3,6 +3,16 @@ import { randomUUID } from "node:crypto";
 const API = "http://127.0.0.1:15238";
 const password = "CleanMate-admin-test-123!";
 const unique = () => `${randomUUID()}@example.test`;
+test('staff handles a customer support report with required resolution and records audit',async({page,request})=>{
+  const email=unique();const r=await request.post(`${API}/api/auth/register`,{data:{fullName:'Support Customer',email,password,phoneNumber:'0901234567'}});expect(r.status()).toBe(200);const customer=await r.json();
+  const booking=await request.post(`${API}/api/bookings`,{headers:{Authorization:`Bearer ${customer.token}`},data:{serviceKey:'cleaning',startTime:new Date(Date.now()+2*86400000).toISOString(),durationHours:2,address:'123 Support Street',paymentMethod:'cash'}});expect(booking.status()).toBe(200);const job=await booking.json();
+  const created=await request.post(`${API}/api/support`,{headers:{Authorization:`Bearer ${customer.token}`},data:{bookingId:job.id,category:'Scheduling',description:'Khách cần hỗ trợ trước giờ làm việc.',requestId:randomUUID()}});expect(created.status()).toBe(200);const ticket=await created.json();
+  const manager=await auth(request),staffEmail=unique();expect((await request.post(`${API}/api/management/staff`,{headers:{Authorization:`Bearer ${manager.token}`},data:{fullName:'Support Staff',email:staffEmail,password}})).status()).toBe(200);
+  await login(page,staffEmail);await page.getByRole('link',{name:'Hỗ trợ',exact:true}).click();await page.getByLabel('Tìm yêu cầu',{exact:true}).fill(email);await page.getByRole('button',{name:'Lọc hỗ trợ',exact:true}).click();await page.locator(`[data-support-id="${ticket.id}"]`).getByRole('button',{name:'Xử lý yêu cầu',exact:true}).click();
+  const dialog=page.getByRole('dialog');await dialog.getByLabel('Trạng thái mới',{exact:true}).selectOption('Resolved');await dialog.getByRole('button',{name:'Lưu xử lý',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('ít nhất 10');await dialog.getByLabel('Phản hồi',{exact:true}).fill('Đã liên hệ và xác nhận lại lịch làm.');await dialog.getByRole('button',{name:'Lưu xử lý',exact:true}).click();await expect(dialog).toHaveCount(0);
+  await expect(page.locator(`[data-support-id="${ticket.id}"]`)).toContainText('Đã giải quyết');const mine=await request.get(`${API}/api/support`,{headers:{Authorization:`Bearer ${customer.token}`}});expect((await mine.json()).items[0].response).toContain('Đã liên hệ');
+  await page.getByRole('link',{name:'Nhật ký thao tác',exact:true}).click();await expect(page.getByRole('cell',{name:`Support:${ticket.id}`,exact:true})).toBeVisible();
+});
 async function auth(request, email = "admin@system.test") {
   const response = await request.post(`${API}/api/auth/login`, { data: { email, password } });
   expect(response.status()).toBe(200); return response.json();

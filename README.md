@@ -23,8 +23,10 @@ The customer must refresh a stale quote before submitting a new booking.
 
 Dashboard totals are service value, not platform revenue. Customers pay cash
 directly to cleaners after work. No money collection or payout is implemented.
-Document verification/upload, support tickets and automatic job assignment are
-not included in this version.
+Staff can now search and resolve booking support reports, with required resolution
+text, version checks, audit and reporter notifications. Reports never change cash
+records or bookings automatically. Document verification/upload and automatic job
+assignment are not included in this version. See ../backend/PROJECT_STATUS.md.
 
 ## Run locally
 
@@ -101,7 +103,8 @@ For full system tests, keep `admin/` and `backend/` as sibling folders, build
 then run `npm run build` and `npm run test:e2e` here.
 The suite uses a generated local SQL Server database and deletes it afterward.
 It never uses application data. Requires local database create/drop permissions.
-It covers 8 cases across desktop and mobile with the real API and database.
+It covers 10 cases across desktop and mobile with the real API and database,
+including staff resolution of support reports and reporter notifications.
 Do not run alongside the customer web system tests: they share test host ports.
 The synthetic admin credentials inside test fixtures belong only to these
 temporary databases and are never provisioned in an application database.
