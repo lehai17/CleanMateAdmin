@@ -18,11 +18,14 @@ test("static server refuses repository files and proxies authenticated managemen
     const index = await fetch(origin);
     assert.equal(index.status, 200);
     assert.match(index.headers.get("content-security-policy"), /frame-ancestors 'none'/);
-    for (const path of ["/.git/config", "/server.mjs", "/package.json", "/api/auth/register", "/api/orders", "/%2e%2e/backend/appsettings.json"])
+    for (const path of ["/.git/config", "/server.mjs", "/package.json", "/api/auth/register", "/api/orders", "/api/notifications/1/delete", "/api/notifications-foreign", "/%2e%2e/backend/appsettings.json"])
       assert.equal((await fetch(origin + path)).status, 404);
     const denied = await fetch(origin + "/api/management/dashboard", { headers: { Authorization: "Bearer test-token" } });
     assert.equal(denied.status, 403);
     assert.equal((await denied.json()).message, "Denied by backend");
+    for(const path of ['/api/notifications','/api/notifications/unread-count','/api/notifications/1/read','/api/notifications/read-all']){
+      const result=await fetch(origin+path,{method:path.includes('/read')?'PUT':'GET',headers:{Authorization:'Bearer test-token'}});assert.equal(result.status,403);
+    }
   } finally { app.closeAllConnections(); upstream.closeAllConnections(); await Promise.all([new Promise(done => app.close(done)), new Promise(done => upstream.close(done))]); }
 });
 

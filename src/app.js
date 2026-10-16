@@ -1,6 +1,7 @@
 import { api, session } from "./api.js";
 import {renderSupport} from './support.js';
 import {showPassword} from './password.js';
+import {showNotifications,createUnreadPoller} from './notifications.js';
 
 const root = document.querySelector("#app");
 const h = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -12,7 +13,13 @@ const badge = (value, context) => `<span class="status ${h(value)}">${h(value ==
 const activeBadge = active => `<span class="status ${active ? "Approved" : "Cancelled"}">${active ? "Đang hoạt động" : "Tạm khóa"}</span>`;
 const nav = [["dashboard", "Tổng quan"], ["applications", "Hồ sơ cleaner"], ["orders", "Đơn hàng"], ["support","Hỗ trợ"], ["services", "Dịch vụ & giá"], ["staff", "Nhân sự"], ["audit", "Nhật ký thao tác"]];
 nav.push(['security','Bảo mật']);
+nav.push(['notifications','Thông báo']);
 let user, generation = 0;
+let unreadCount=0;
+const unreadPoller=createUnreadPoller({api,getToken:()=>user?session.get():null,isVisible:()=>document.visibilityState!=='hidden',onCount:updateUnread,onExpired:fail});
+function updateUnread(count){
+  unreadCount=count;const badge=document.querySelector('[data-unread-badge]');if(badge){badge.hidden=count===0;badge.textContent=count>99?'99+':String(count);badge.closest('a').title=`${count} thông báo chưa đọc`;}
+}
 const state = { applications: { page: 1, status: "Pending", search: "" }, orders: { page: 1, status: "All", search: "" },support:{page:1,status:'All',search:''} };
 let rows = [];
 const route = () => location.hash.slice(2) || "dashboard";
@@ -27,6 +34,7 @@ function fail(error) {
 }
 function login(error = "") {
   generation++;
+  unreadPoller.accept(0);
   root.innerHTML = `<div class="login"><aside class="login-aside"><div class="brand">Clean<span>Mate</span></div><h1>Quản lý dịch vụ.<br>Vận hành rõ ràng.</h1><p>Không gian làm việc dành cho đội ngũ CleanMate. Duyệt hồ sơ, theo dõi ca làm và quản lý dịch vụ tại một nơi.</p></aside><main class="login-main"><p class="eyebrow">Cổng quản trị</p><h2>Đăng nhập</h2><p class="muted">Sử dụng tài khoản Admin hoặc Staff được cấp.</p><div id="notice" class="${error ? "alert" : ""}">${h(error)}</div><form id="login"><label>Email<input name="email" type="email" autocomplete="username" required maxlength="254"></label><label>Mật khẩu<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label><button>Đăng nhập</button></form><p class="muted">Tài khoản quản trị không được tạo qua đăng ký công khai.</p></main></div>`;
   document.querySelector("#login").onsubmit = async event => {
     event.preventDefault(); const form = event.currentTarget; const button = form.querySelector("button"); button.disabled = true;
@@ -39,7 +47,7 @@ function login(error = "") {
   };
 }
 function layout(current) {
-  root.innerHTML = `<div class="layout"><aside class="sidebar"><div><div class="brand">Clean<span>Mate</span></div><small>Không gian quản trị</small></div><nav aria-label="Quản trị">${nav.filter(([key]) => key !== "staff" || user.role === "Admin").map(([key, label]) => `<a href="#/${key}" ${key === current ? 'class="active" aria-current="page"' : ""}>${label}</a>`).join("")}</nav><div class="account"><strong>${h(user.fullName)}</strong><p>${h(user.email)}</p><button id="logout">Đăng xuất</button></div></aside><div class="workspace"><header class="topbar"><h1>${h(nav.find(([key]) => key === current)?.[1] || "Quản trị")}</h1><span class="role">${h(user.role === "Admin" ? "Quản trị viên" : "Nhân viên vận hành")}</span></header><main class="content"><div id="notice"></div><section id="view" aria-live="polite"><p class="loading">Đang tải dữ liệu...</p></section></main></div></div>`;
+  root.innerHTML = `<div class="layout"><aside class="sidebar"><div><div class="brand">Clean<span>Mate</span></div><small>Không gian quản trị</small></div><nav aria-label="Quản trị">${nav.filter(([key]) => key !== "staff" || user.role === "Admin").map(([key, label]) => `<a href="#/${key}" ${key === "notifications" ? 'aria-label="Thông báo"' : ""} ${key === current ? 'class="active" aria-current="page"' : ""}>${label}${key === "notifications" ? `<span data-unread-badge class="notification-count" aria-hidden="true" ${unreadCount?"":"hidden"}>${unreadCount>99?"99+":unreadCount}</span>` : ""}</a>`).join("")}</nav><div class="account"><strong>${h(user.fullName)}</strong><p>${h(user.email)}</p><button id="logout">Đăng xuất</button></div></aside><div class="workspace"><header class="topbar"><h1>${h(nav.find(([key]) => key === current)?.[1] || "Quản trị")}</h1><span class="role">${h(user.role === "Admin" ? "Quản trị viên" : "Nhân viên vận hành")}</span></header><main class="content"><div id="notice"></div><section id="view" aria-live="polite"><p class="loading">Đang tải dữ liệu...</p></section></main></div></div>`;
   document.querySelector("#logout").onclick = () => { session.clear(); user = null; login(); };
 }
 function table(headers, body) { return `<div class="table-wrap"><table><thead><tr>${headers.map(text => `<th>${text}</th>`).join("")}</tr></thead><tbody>${body || `<tr><td colspan="${headers.length}" class="empty">Không có dữ liệu phù hợp.</td></tr>`}</tbody></table></div>`; }
@@ -94,7 +102,11 @@ async function render() {
   const current = nav.some(([key]) => key === route()) ? route() : "dashboard";
   const ticket = ++generation; layout(current);
   const view = document.querySelector("#view");
+  unreadPoller.refresh();
   try {
+    if(current==='notifications')return showNotifications({view,api,h,isCurrent:()=>ticket===generation&&Boolean(user),fail,onCount:count=>unreadPoller.accept(count),onOpen:action=>{
+      if(!action)return;if(action.filters)state[action.route]={...action.filters};location.hash=`#/${action.route}`;
+    }});
     if(current==='security')return showPassword({view,api,fail,onChanged:(notice='Đã đổi mật khẩu. Vui lòng đăng nhập lại.')=>{session.clear();user=null;login(notice);}});
     if (current === "staff" && user.role !== "Admin") throw new Error("Chỉ Admin được quản lý nhân sự.");
     const query = state[current] ? `?${new URLSearchParams(state[current])}` : "";
@@ -134,6 +146,9 @@ async function render() {
   } catch (error) { if (ticket === generation) { view.innerHTML = '<p class="empty">Không tải được dữ liệu. Bạn có thể thử lại.</p><button id="retry">Thử lại</button>'; document.querySelector("#retry").onclick = render; fail(error); } }
 }
 window.addEventListener("hashchange", () => { if (user) render(); });
+window.addEventListener('focus',()=>unreadPoller.refresh());
+document.addEventListener('visibilitychange',()=>unreadPoller.refresh());
+setInterval(()=>unreadPoller.refresh(),30000);
 try {
   if (!session.get()) login();
   else { user = await api("/me"); if (!["Admin", "Staff"].includes(user.role)) throw new Error("Tài khoản không có quyền quản trị."); await render(); }
