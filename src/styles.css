@@ -3,3 +3,5 @@
 .support-card p { white-space:pre-wrap; line-height:1.6; }
 
 .thread-body { white-space: pre-wrap; }
+
+.notification-count{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;background:#e6b55c;color:#173e34;font-size:12px;font-weight:700}.notification-count[hidden]{display:none}.notification-card{padding:18px 0;border-bottom:1px solid #dce6e2;overflow-wrap:anywhere}.notification-card.unread{border-left:3px solid #087a62;padding-left:14px}.notification-card p{white-space:pre-wrap}.notification-card h3{margin-bottom:8px}

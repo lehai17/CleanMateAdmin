@@ -103,7 +103,7 @@ For full system tests, keep `admin/` and `backend/` as sibling folders, build
 then run `npm run build` and `npm run test:e2e` here.
 The suite uses a generated local SQL Server database and deletes it afterward.
 It never uses application data. Requires local database create/drop permissions.
-It covers 18 cases across desktop and mobile with the real API and database,
+It covers 22 cases across desktop and mobile with the real API and database,
 including staff resolution of support reports and reporter notifications.
 The Security page changes the current Admin/Staff password and invalidates all old
 JWT sessions, including the current one. Tests verify staff reauthentication and
@@ -119,6 +119,13 @@ For deployment, run the Node server behind an HTTPS reverse proxy and configure
 as a generic file server. No hosting or deployment is configured here.
 
 ## Git
+
+Admin/Staff now have a **Thông báo** inbox and foreground unread badge. Cleaner
+submissions/resubmissions and incoming support reports/messages create alerts.
+Items open exact HS/HT records, including processed cleaner profiles. Opening is
+separate from marking read; bulk read preserves newer arrivals. Refresh is available
+after a load/read failure. This uses existing recipient-scoped notification APIs
+and adds no browser permissions or background push. See ../backend/STAFF_NOTIFICATIONS.md.
 
 Support → Xem trao đổi reads private reporter/staff history and sends staff replies.
 New processing responses join the history. Reply acknowledgements update the local
