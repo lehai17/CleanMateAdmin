@@ -1,0 +1,50 @@
+import http from "node:http";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+export function createServer({ apiUrl = process.env.CLEANMATE_API_URL || "http://localhost:5238", root = process.env.CLEANMATE_ADMIN_ROOT || fileURLToPath(new URL(".", import.meta.url)) } = {}) {
+  const api = new URL(apiUrl);
+  if (!["http:", "https:"].includes(api.protocol) || api.username || api.password || api.pathname !== "/") throw new Error("CLEANMATE_API_URL must be an HTTP(S) origin without credentials.");
+  return http.createServer(async (request, response) => {
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader("Referrer-Policy", "same-origin");
+    response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    response.setHeader("Cache-Control", "no-store");
+    const url = new URL(request.url, "http://localhost");
+    try {
+      if (url.pathname.startsWith("/api/")) {
+        if (!(url.pathname === "/api/auth/login" || url.pathname === "/api/me" || url.pathname === "/api/management" || url.pathname.startsWith("/api/management/"))) {
+          response.writeHead(404).end(); return;
+        }
+        if (!["GET", "POST", "PUT"].includes(request.method)) { response.writeHead(405).end(); return; }
+        let body = Buffer.alloc(0);
+        for await (const chunk of request) {
+          body = Buffer.concat([body, chunk]);
+          if (body.length > 524288) { response.writeHead(413).end(); return; }
+        }
+        const headers = { Accept: "application/json", "Content-Type": "application/json" };
+        if (request.headers.authorization) headers.Authorization = request.headers.authorization;
+        const upstream = await fetch(new URL(url.pathname + url.search, api), {
+          method: request.method, headers, body: body.length ? body : undefined,
+          signal: AbortSignal.timeout(30000), redirect: "manual"
+        });
+        response.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") || "application/json" });
+        response.end(Buffer.from(await upstream.arrayBuffer())); return;
+      }
+      const files = new Map([["/", "index.html"], ["/index.html", "index.html"], ["/src/app.js", "src/app.js"], ["/src/api.js", "src/api.js"], ["/src/styles.css", "src/styles.css"]]);
+      const file = files.get(url.pathname);
+      if (!file || !["GET", "HEAD"].includes(request.method)) { response.writeHead(404).end(); return; }
+      const content = await readFile(path.join(root, file));
+      response.writeHead(200, { "Content-Type": file.endsWith(".js") ? "text/javascript; charset=utf-8" : file.endsWith(".css") ? "text/css; charset=utf-8" : "text/html; charset=utf-8" });
+      response.end(request.method === "HEAD" ? undefined : content);
+    } catch {
+      if (!response.headersSent) response.writeHead(502, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ message: "Không thể kết nối API. Kiểm tra backend và thử lại." }));
+    }
+  });
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const port = Number(process.env.PORT || 3001);
+  createServer().listen(port, "127.0.0.1", () => console.log(`CleanMate Admin: http://127.0.0.1:${port}`));
+}
