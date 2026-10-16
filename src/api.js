@@ -5,11 +5,13 @@ export const session = {
   clear: () => sessionStorage.removeItem(key)
 };
 export async function api(path, { method = "GET", data } = {}) {
+  const requestToken=session.get();
   const response = await fetch(`/api${path}`, {
-    method, headers: { "Content-Type": "application/json", ...(session.get() ? { Authorization: `Bearer ${session.get()}` } : {}) },
+    method, headers: { "Content-Type": "application/json", ...(requestToken ? { Authorization: `Bearer ${requestToken}` } : {}) },
     body: data === undefined ? undefined : JSON.stringify(data), cache: "no-store"
   });
   const text = await response.text();
+  if(requestToken!==session.get()){const error=new Error('');error.staleSession=true;error.status=0;throw error;}
   let result;
   try { result = text ? JSON.parse(text) : null; } catch { result = null; }
   if (!response.ok) {

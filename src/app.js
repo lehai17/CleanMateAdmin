@@ -35,6 +35,7 @@ function showNotice(message, success = false) {
   if (element) { element.className = `alert ${success ? "success" : ""}`; element.textContent = message; }
 }
 function fail(error) {
+  if(error.staleSession)return;
   if (error.status === 401) { session.clear(); user = null; login(error.message); }
   else showNotice(error.message || "Không thể kết nối. Vui lòng thử lại.");
 }
@@ -161,7 +162,19 @@ window.addEventListener("hashchange", () => { if (user) render(); });
 window.addEventListener('focus',()=>unreadPoller.refresh());
 document.addEventListener('visibilitychange',()=>unreadPoller.refresh());
 setInterval(()=>unreadPoller.refresh(),30000);
-try {
-  if (!session.get()) login();
-  else { user = await api("/me"); if (!["Admin", "Staff"].includes(user.role)) throw new Error("Tài khoản không có quyền quản trị."); await render(); }
-} catch (error) { session.clear(); user = null; login(error.message); }
+async function init(){
+  const expected=session.get();if(!expected)return login();const ticket=++generation;
+  root.textContent='Đang kiểm tra tài khoản...';
+  try{
+    const current=await api('/me');if(ticket!==generation||session.get()!==expected)return;
+    if(!['Admin','Staff'].includes(current.role)){session.clear();user=null;return login('Tài khoản không có quyền quản trị.');}
+    user=current;await render();
+  }catch(error){
+    if(error.staleSession||ticket!==generation||session.get()!==expected)return;
+    if(error.status===401){session.clear();user=null;return login(error.message);}
+    root.innerHTML='<main class="content"><p role="alert">Không thể kết nối để kiểm tra tài khoản. Vui lòng thử lại.</p><button data-retry-session>Thử kết nối lại</button> <button class="secondary" data-other-account>Đăng nhập bằng tài khoản khác</button></main>';
+    root.querySelector('[data-retry-session]').onclick=init;
+    root.querySelector('[data-other-account]').onclick=()=>{session.clear();user=null;login();};
+  }
+}
+init();
