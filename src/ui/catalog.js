@@ -892,5 +892,6 @@ export const english = {
   "T4": "Wed",
   "T5": "Thu",
   "T6": "Fri",
-  "T7": "Sat"
+  "T7": "Sat",
+  "Khóa hoặc mở quyền truy cập sẽ thu hồi các phiên cũ. Staff cần đăng nhập lại sau khi được mở khóa.": "Locking or unlocking access revokes previous sessions. Staff must sign in again after being unlocked."
 };
