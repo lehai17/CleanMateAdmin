@@ -134,11 +134,11 @@ async function render() {
       view.querySelectorAll("[data-service]").forEach(button => button.onclick = () => editService(rows[Number(button.dataset.service)]));
     } else if (current === "staff") {
       rows = data;
-      view.innerHTML = `<div class="section-head"><div><p class="eyebrow">Phân quyền vận hành</p><h2>Nhân sự Staff</h2></div><button id="create-staff">Tạo Staff</button></div><p class="muted">Khóa tài khoản sẽ chặn cả phiên đăng nhập đang tồn tại ở API.</p><section class="panel">${table(["Nhân viên", "Email", "Trạng thái", "Thao tác"], rows.map(item => `<tr><td>${`<span data-ui-raw>${h(item.fullName)}</span>`}</td><td>${`<span data-ui-raw>${h(item.email)}</span>`}</td><td>${activeBadge(item.isActive)}</td><td><button data-access="${item.id}" class="${item.isActive ? "danger" : "secondary"}">${item.isActive ? "Khóa truy cập" : "Mở truy cập"}</button></td></tr>`).join(""))}</section>`;
+      view.innerHTML = `<div class="section-head"><div><p class="eyebrow">Phân quyền vận hành</p><h2>Nhân sự Staff</h2></div><button id="create-staff">Tạo Staff</button></div><p class="muted">Khóa hoặc mở quyền truy cập sẽ thu hồi các phiên cũ. Staff cần đăng nhập lại sau khi được mở khóa.</p><section class="panel">${table(["Nhân viên", "Email", "Trạng thái", "Thao tác"], rows.map(item => `<tr><td>${`<span data-ui-raw>${h(item.fullName)}</span>`}</td><td>${`<span data-ui-raw>${h(item.email)}</span>`}</td><td>${activeBadge(item.isActive)}</td><td><button data-access="${item.id}" class="${item.isActive ? "danger" : "secondary"}">${item.isActive ? "Khóa truy cập" : "Mở truy cập"}</button></td></tr>`).join(""))}</section>`;
       document.querySelector("#create-staff").onclick = createStaff;
       view.querySelectorAll("[data-access]").forEach(button => button.onclick = async () => {
         const item = rows.find(row => row.id === Number(button.dataset.access));
-        if (!confirm(t(`${item.isActive ? "Khóa" : "Mở"} quyền truy cập của ${item.fullName}?`))) return;
+        if (!confirm(`${t(item.isActive ? 'Khóa truy cập' : 'Mở truy cập')}: ${item.fullName}?`)) return;
         button.disabled = true;
         try { await api(`/management/staff/${item.id}/access`, { method: "PUT", data: { isActive: !item.isActive, expectedActive: item.isActive } }); await render(); showNotice("Đã cập nhật quyền truy cập.", true); } catch (error) { fail(error); button.disabled = false; }
       });

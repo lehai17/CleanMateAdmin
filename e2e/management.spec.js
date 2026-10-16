@@ -203,4 +203,10 @@ test("admin creates and locks staff, invalidating an already issued session", as
   await expect(page.getByRole("row").filter({ hasText: email }).getByRole("button", { name: "Mở truy cập", exact: true })).toBeVisible();
   expect((await request.get(`${API}/api/management/dashboard`, { headers: { Authorization: `Bearer ${staff.token}` } })).status()).toBe(401);
   expect((await request.post(`${API}/api/auth/login`, { data: { email, password } })).status()).toBe(401);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("row").filter({hasText:email}).getByRole("button",{name:"Mở truy cập",exact:true}).click();
+  await expect(page.getByRole("row").filter({hasText:email}).getByRole("button",{name:"Khóa truy cập",exact:true})).toBeVisible();
+  expect((await request.get(`${API}/api/management/dashboard`,{headers:{Authorization:`Bearer ${staff.token}`}})).status()).toBe(401);
+  const fresh=await auth(request,email);
+  expect((await request.get(`${API}/api/management/dashboard`,{headers:{Authorization:`Bearer ${fresh.token}`}})).status()).toBe(200);
 });
