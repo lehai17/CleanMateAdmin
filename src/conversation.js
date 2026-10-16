@@ -8,7 +8,7 @@ export function conversation({container,ticketId,api,h,management=false,onUpdate
     const load=async(older=false)=>{
       const data=await api(`${path}${older?`?beforeId=${cursor}`:''}`);if(!isCurrent())return;
       items=older?[...data.items,...items.filter(m=>!data.items.some(n=>n.id===m.id))]:data.items;cursor=data.nextBeforeId;
-      container.querySelector('[data-thread-items]').innerHTML=items.map(m=>`<article data-message-id="${m.id}"><strong>${m.fromStaff?'Nhân viên':'Người gửi yêu cầu'}</strong> · <time>${h(new Date(m.createdAt).toLocaleString('vi-VN'))}</time><p class="thread-body">${h(m.body)}</p></article>`).join('')||'<p>Chưa có trao đổi bổ sung.</p>';
+      container.querySelector('[data-thread-items]').innerHTML=items.map(m=>`<article data-message-id="${m.id}"><strong>${m.fromStaff?'Nhân viên':'Người gửi yêu cầu'}</strong> · <time>${h(new Date(m.createdAt).toLocaleString('vi-VN'))}</time><p class="thread-body">${`<span data-ui-raw>${h(m.body)}</span>`}</p></article>`).join('')||'<p>Chưa có trao đổi bổ sung.</p>';
       container.querySelector('[data-older-thread]').hidden=!cursor;container.querySelector('[data-thread-error]').textContent='';
     };
     for(const [selector,older] of [['[data-refresh-thread]',false],['[data-older-thread]',true]])container.querySelector(selector).onclick=async()=>{if(busy)return;busy=true;try{await load(older);}catch(e){showError(e);}finally{busy=false;}};
